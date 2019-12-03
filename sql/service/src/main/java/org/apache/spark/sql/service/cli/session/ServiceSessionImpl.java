@@ -687,19 +687,4 @@ public class ServiceSessionImpl implements ServiceSession {
       throws ServiceSQLException {
     return authFactory.getUserFromToken(tokenStr);
   }
-
-  @Override
-  public OperationHandle getPrimaryKeys(String catalog, String schema,
-      String table) throws ServiceSQLException {
-    acquire(true);
-    throw new ServiceSQLException("GetPrimaryKeys is not supported yet");
-  }
-
-  @Override
-  public OperationHandle getCrossReference(String primaryCatalog,
-      String primarySchema, String primaryTable, String foreignCatalog,
-      String foreignSchema, String foreignTable) throws ServiceSQLException {
-    acquire(true);
-    throw new ServiceSQLException("GetCrossReference is not supported yet");
-  }
 }

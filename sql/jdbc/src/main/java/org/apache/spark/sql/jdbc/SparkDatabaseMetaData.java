@@ -35,15 +35,11 @@ import org.apache.spark.sql.service.rpc.thrift.TGetCatalogsReq;
 import org.apache.spark.sql.service.rpc.thrift.TGetCatalogsResp;
 import org.apache.spark.sql.service.rpc.thrift.TGetColumnsReq;
 import org.apache.spark.sql.service.rpc.thrift.TGetColumnsResp;
-import org.apache.spark.sql.service.rpc.thrift.TGetCrossReferenceReq;
-import org.apache.spark.sql.service.rpc.thrift.TGetCrossReferenceResp;
 import org.apache.spark.sql.service.rpc.thrift.TGetFunctionsReq;
 import org.apache.spark.sql.service.rpc.thrift.TGetFunctionsResp;
 import org.apache.spark.sql.service.rpc.thrift.TGetInfoReq;
 import org.apache.spark.sql.service.rpc.thrift.TGetInfoResp;
 import org.apache.spark.sql.service.rpc.thrift.TGetInfoType;
-import org.apache.spark.sql.service.rpc.thrift.TGetPrimaryKeysReq;
-import org.apache.spark.sql.service.rpc.thrift.TGetPrimaryKeysResp;
 import org.apache.spark.sql.service.rpc.thrift.TGetSchemasReq;
 import org.apache.spark.sql.service.rpc.thrift.TGetSchemasResp;
 import org.apache.spark.sql.service.rpc.thrift.TGetTableTypesReq;
@@ -259,27 +255,7 @@ public class SparkDatabaseMetaData implements DatabaseMetaData {
   public ResultSet getCrossReference(String primaryCatalog,
       String primarySchema, String primaryTable, String foreignCatalog,
       String foreignSchema, String foreignTable) throws SQLException {
-   TGetCrossReferenceResp getFKResp;
-   TGetCrossReferenceReq getFKReq = new TGetCrossReferenceReq(sessHandle);
-   getFKReq.setParentTableName(primaryTable);
-   getFKReq.setParentSchemaName(primarySchema);
-   getFKReq.setParentCatalogName(primaryCatalog);
-   getFKReq.setForeignTableName(foreignTable);
-   getFKReq.setForeignSchemaName(foreignSchema);
-   getFKReq.setForeignCatalogName(foreignCatalog);
-
-   try {
-     getFKResp = client.GetCrossReference(getFKReq);
-   } catch (TException e) {
-     throw new SQLException(e.getMessage(), "08S01", e);
-   }
-   Utils.verifySuccess(getFKResp.getStatus());
-
-   return new SparkQueryResultSet.Builder(connection)
-     .setClient(client)
-     .setSessionHandle(sessHandle)
-     .setStmtHandle(getFKResp.getOperationHandle())
-     .build();
+    throw new SQLException("Method not supported");
   }
 
   public int getDatabaseMajorVersion() throws SQLException {
@@ -519,23 +495,12 @@ public class SparkDatabaseMetaData implements DatabaseMetaData {
 
   public ResultSet getPrimaryKeys(String catalog, String schema, String table)
       throws SQLException {
-    TGetPrimaryKeysResp getPKResp;
-    TGetPrimaryKeysReq getPKReq = new TGetPrimaryKeysReq(sessHandle);
-    getPKReq.setTableName(table);
-    getPKReq.setSchemaName(schema);
-    getPKReq.setCatalogName(catalog);
-    try {
-      getPKResp = client.GetPrimaryKeys(getPKReq);
-    } catch (TException e) {
-      throw new SQLException(e.getMessage(), "08S01", e);
-    }
-    Utils.verifySuccess(getPKResp.getStatus());
-
-    return new SparkQueryResultSet.Builder(connection)
-    .setClient(client)
-    .setSessionHandle(sessHandle)
-    .setStmtHandle(getPKResp.getOperationHandle())
-    .build();
+    // Spark SQL doesn't support primary keys
+    // using local schema with empty ResultSet
+    return new SparkQueryResultSet.Builder(connection).setClient(client).setEmptyResultSet(true).
+        setSchema(Arrays.asList("TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME",
+            "KEY_SEQ", "PK_NAME" ),
+                Arrays.asList("STRING", "STRING", "STRING", "STRING", "INT", "STRING")).build();
   }
 
   public ResultSet getProcedureColumns(String catalog, String schemaPattern,

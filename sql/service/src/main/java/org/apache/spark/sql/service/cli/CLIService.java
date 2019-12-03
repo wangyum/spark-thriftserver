@@ -355,33 +355,6 @@ public class CLIService extends CompositeService implements ICLIService {
   }
 
   /* (non-Javadoc)
-   * @see ICLIService#getPrimaryKeys(SessionHandle)
-   */
-  @Override
-  public OperationHandle getPrimaryKeys(SessionHandle sessionHandle,
-      String catalog, String schema, String table) throws ServiceSQLException {
-    OperationHandle opHandle = sessionManager.getSession(sessionHandle)
-        .getPrimaryKeys(catalog, schema, table);
-    LOG.debug(sessionHandle + ": getPrimaryKeys()");
-    return opHandle;
-  }
-
-  /* (non-Javadoc)
-   * @see ICLIService#getCrossReference(SessionHandle)
-   */
-  @Override
-  public OperationHandle getCrossReference(SessionHandle sessionHandle,
-      String primaryCatalog, String primarySchema, String primaryTable, String foreignCatalog,
-      String foreignSchema, String foreignTable) throws ServiceSQLException {
-    OperationHandle opHandle = sessionManager.getSession(sessionHandle)
-        .getCrossReference(primaryCatalog, primarySchema, primaryTable,
-         foreignCatalog,
-         foreignSchema, foreignTable);
-    LOG.debug(sessionHandle + ": getCrossReference()");
-    return opHandle;
-  }
-
-  /* (non-Javadoc)
    * @see ICLIService#getOperationStatus(OperationHandle)
    */
   @Override

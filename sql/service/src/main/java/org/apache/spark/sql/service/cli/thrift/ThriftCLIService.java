@@ -627,41 +627,6 @@ public abstract class ThriftCLIService extends AbstractService
   }
 
   @Override
-  public TGetPrimaryKeysResp GetPrimaryKeys(TGetPrimaryKeysReq req)
-      throws TException {
-    TGetPrimaryKeysResp resp = new TGetPrimaryKeysResp();
-    try {
-      OperationHandle opHandle = cliService.getPrimaryKeys(
-      new SessionHandle(req.getSessionHandle()), req.getCatalogName(),
-      req.getSchemaName(), req.getTableName());
-      resp.setOperationHandle(opHandle.toTOperationHandle());
-      resp.setStatus(OK_STATUS);
-    } catch (Exception e) {
-     LOG.warn("Error getting functions: ", e);
-     resp.setStatus(ServiceSQLException.toTStatus(e));
-    }
-    return resp;
-  }
-
-  @Override
-  public TGetCrossReferenceResp GetCrossReference(TGetCrossReferenceReq req)
-      throws TException {
-    TGetCrossReferenceResp resp = new TGetCrossReferenceResp();
-    try {
-      OperationHandle opHandle = cliService.getCrossReference(
-        new SessionHandle(req.getSessionHandle()), req.getParentCatalogName(),
-          req.getParentSchemaName(), req.getParentTableName(),
-          req.getForeignCatalogName(), req.getForeignSchemaName(), req.getForeignTableName());
-          resp.setOperationHandle(opHandle.toTOperationHandle());
-          resp.setStatus(OK_STATUS);
-    } catch (Exception e) {
-      LOG.warn("Error getting functions: ", e);
-      resp.setStatus(ServiceSQLException.toTStatus(e));
-    }
-    return resp;
-  }
-
-  @Override
   public abstract void run();
 
   /**

@@ -456,46 +456,4 @@ public class ThriftCLIServiceClient extends CLIServiceClient {
       throw new ServiceSQLException(e);
     }
   }
-
-  @Override
-  public OperationHandle getPrimaryKeys(SessionHandle sessionHandle,
-      String catalog, String schema, String table) throws ServiceSQLException {
-    try {
-      TGetPrimaryKeysReq req = new TGetPrimaryKeysReq(sessionHandle.toTSessionHandle());
-      req.setCatalogName(catalog);
-      req.setSchemaName(schema);
-      req.setTableName(table);
-      TGetPrimaryKeysResp resp = cliService.GetPrimaryKeys(req);
-      checkStatus(resp.getStatus());
-      TProtocolVersion protocol = sessionHandle.getProtocolVersion();
-      return new OperationHandle(resp.getOperationHandle(), protocol);
-    } catch (ServiceSQLException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new ServiceSQLException(e);
-    }
-  }
-
-  @Override
-  public OperationHandle getCrossReference(SessionHandle sessionHandle,
-      String primaryCatalog, String primarySchema, String primaryTable,
-      String foreignCatalog, String foreignSchema, String foreignTable) throws ServiceSQLException {
-    try {
-      TGetCrossReferenceReq req = new TGetCrossReferenceReq(sessionHandle.toTSessionHandle());
-      req.setParentCatalogName(primaryCatalog);
-      req.setParentSchemaName(primarySchema);
-      req.setParentTableName(primaryTable);
-      req.setForeignCatalogName(foreignCatalog);
-      req.setForeignSchemaName(foreignSchema);
-      req.setForeignTableName(foreignTable);
-      TGetCrossReferenceResp resp = cliService.GetCrossReference(req);
-      checkStatus(resp.getStatus());
-      TProtocolVersion protocol = sessionHandle.getProtocolVersion();
-      return new OperationHandle(resp.getOperationHandle(), protocol);
-    } catch (ServiceSQLException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new ServiceSQLException(e);
-    }
-  }
 }

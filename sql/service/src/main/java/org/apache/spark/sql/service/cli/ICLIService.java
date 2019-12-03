@@ -100,11 +100,4 @@ public interface ICLIService {
 
   void renewDelegationToken(SessionHandle sessionHandle, SparkAuthFactory authFactory,
       String tokenStr) throws ServiceSQLException;
-
-  OperationHandle getPrimaryKeys(SessionHandle sessionHandle, String catalog,
-      String schema, String table) throws ServiceSQLException;
-
-  OperationHandle getCrossReference(SessionHandle sessionHandle,
-      String primaryCatalog, String primarySchema, String primaryTable,
-      String foreignCatalog, String foreignSchema, String foreignTable) throws ServiceSQLException;
 }

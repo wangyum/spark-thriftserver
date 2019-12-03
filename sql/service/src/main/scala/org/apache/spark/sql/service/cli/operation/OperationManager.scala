@@ -179,23 +179,6 @@ class OperationManager
     operation
   }
 
-  def newGetPrimaryKeysOperation(session: ServiceSession,
-                                 catalogName: String,
-                                 schemaName: String,
-                                 tableName: String): Operation = {
-    throw new ServiceSQLException("GetPrimaryKeysOperation is not supported yet")
-  }
-
-  def newGetCrossReferenceOperation(parentSession: ServiceSession,
-                                    primaryCatalog: String,
-                                    primarySchema: String,
-                                    primaryTable: String,
-                                    foreignCatalog: String,
-                                    foreignSchema: String,
-                                    foreignTable: String): Operation = {
-    throw new ServiceSQLException("GetCrossReferenceOperation is not supported yet")
-  }
-
   def setConfMap(conf: SQLConf, confMap: java.util.Map[String, String]): Unit = {
     val iterator = confMap.entrySet().iterator()
     while (iterator.hasNext) {

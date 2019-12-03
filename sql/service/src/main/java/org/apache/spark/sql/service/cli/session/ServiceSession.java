@@ -145,33 +145,6 @@ public interface ServiceSession extends ServiceSessionBase {
       String functionName) throws ServiceSQLException;
 
   /**
-   * getPrimaryKeys operation handler
-   * @param catalog
-   * @param schema
-   * @param table
-   * @return
-   * @throws ServiceSQLException
-   */
-  OperationHandle getPrimaryKeys(String catalog, String schema,
-      String table) throws ServiceSQLException;
-
-
-  /**
-   * getCrossReference operation handler
-   * @param primaryCatalog
-   * @param primarySchema
-   * @param primaryTable
-   * @param foreignCatalog
-   * @param foreignSchema
-   * @param foreignTable
-   * @return
-   * @throws ServiceSQLException
-   */
-  OperationHandle getCrossReference(String primaryCatalog,
-      String primarySchema, String primaryTable, String foreignCatalog,
-      String foreignSchema, String foreignTable) throws ServiceSQLException;
-
-  /**
    * close the session
    * @throws ServiceSQLException
    */
