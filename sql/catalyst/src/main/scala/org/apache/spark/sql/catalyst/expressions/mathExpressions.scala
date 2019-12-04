@@ -1319,3 +1319,96 @@ case class BRound(child: Expression, scale: Expression)
     with Serializable with ImplicitCastInputTypes {
   def this(child: Expression) = this(child, Literal(0))
 }
+
+case class EbayMultiply(left: Expression, right: Expression) extends BinaryArithmetic {
+
+  override def inputType: AbstractDataType = DoubleType
+
+  override def symbol: String = "ebay_multiply"
+
+  protected override def nullSafeEval(input1: Any, input2: Any): Any = {
+
+    val realValue = java.math.BigDecimal.valueOf(input1.asInstanceOf[Double])
+      .multiply(java.math.BigDecimal.valueOf(input2.asInstanceOf[Double]))
+    val realStrValue = realValue.stripTrailingZeros().toPlainString
+    val result = if (realStrValue.split("\\.").length == 2) {
+      val last = realStrValue.split("\\.").last
+      if (last.length == 3 && last.last.equals('5')) {
+        val vd = new java.math.BigDecimal(realValue.doubleValue(), java.math.MathContext.DECIMAL128)
+        val vf = new java.math.BigDecimal(realValue.floatValue(), java.math.MathContext.DECIMAL128)
+        val vff = java.math.BigDecimal.valueOf(input1.asInstanceOf[Double].floatValue())
+          .multiply(java.math.BigDecimal.valueOf(input2.asInstanceOf[Double].floatValue()))
+        // 5.0 * 1.243 = 6.215
+        if (vd.toString.split("\\.").last.charAt(2).equals('4')) {
+          vd
+          // 2.4 * 1.20625 = 2.895
+        } else if (vf.toString.split("\\.").last.charAt(2).equals('4')) {
+          vf
+        } else if (vff.toString.split("\\.").last.charAt(2).equals('4')) {
+          vff
+        } else {
+          new java.math.BigDecimal(input1.asInstanceOf[Double] * input2.asInstanceOf[Double])
+        }
+      } else {
+        realValue
+      }
+    } else {
+      new java.math.BigDecimal(input1.asInstanceOf[Double] * input2.asInstanceOf[Double])
+    }
+
+    result.setScale(2, java.math.RoundingMode.HALF_EVEN).doubleValue()
+  }
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    nullSafeCodeGen(ctx, ev, (eval1, eval2) => {
+      val realValue = ctx.freshName("realValue")
+      val realStrValue = ctx.freshName("realStrValue")
+      val last = ctx.freshName("last")
+      val vd = ctx.freshName("vd")
+      val vf = ctx.freshName("vf")
+      val vff = ctx.freshName("vff")
+      val regex = ctx.freshName("regex")
+      s"""
+         |String $regex = "\\\\\\\\.";
+         |
+         |java.math.BigDecimal $realValue = new java.math.BigDecimal(String.valueOf((double)$eval1))
+         |  .multiply(new java.math.BigDecimal(String.valueOf((double)$eval2)));
+         |String $realStrValue = $realValue.stripTrailingZeros().toPlainString();
+         |
+         |if ($realStrValue.split($regex).length == 2) {
+         |  String $last = $realStrValue.split($regex)[1];
+         |  if ($last.length() == 3 && $last.charAt(2) == '5') {
+         |    java.math.BigDecimal $vd = new java.math.BigDecimal($realValue.doubleValue(),
+         |        java.math.MathContext.DECIMAL128);
+         |    java.math.BigDecimal $vf = new java.math.BigDecimal($realValue.floatValue(),
+         |        java.math.MathContext.DECIMAL128);
+         |    java.math.BigDecimal $vff =
+         |        new java.math.BigDecimal(Float.valueOf(String.valueOf((double)$eval1)))
+         |      .multiply(new java.math.BigDecimal(Float.valueOf(String.valueOf((double)$eval2))));
+         |    if ($vd.toString().split($regex)[1].charAt(2) == '4') {
+         |      ${ev.value} = $vd.setScale(2, java.math.RoundingMode.HALF_EVEN)
+         |        .doubleValue();
+         |    } else if ($vf.toString().split($regex)[1].charAt(2) == '4') {
+         |      ${ev.value} = $vf.setScale(2, java.math.RoundingMode.HALF_EVEN)
+         |        .doubleValue();
+         |    } else if ($vff.toString().split($regex)[1].charAt(2) == '4') {
+         |      ${ev.value} = $vff.setScale(2, java.math.RoundingMode.HALF_EVEN)
+         |        .doubleValue();
+         |    } else {
+         |    ${ev.value} = new java.math.BigDecimal(
+         |      (double)$eval1 * (double)$eval2)
+         |      .setScale(2, java.math.RoundingMode.HALF_EVEN).doubleValue();
+         |    }
+         |  } else {
+         |    ${ev.value} = $realValue.setScale(2, java.math.RoundingMode.HALF_EVEN)
+         |      .doubleValue();
+         |  }
+         |} else {
+         |  ${ev.value} = new java.math.BigDecimal(
+         |      (double)$eval1 * (double)$eval2)
+         |      .setScale(2, java.math.RoundingMode.HALF_EVEN).doubleValue();
+         |}
+        """.stripMargin
+    })
+  }
+}

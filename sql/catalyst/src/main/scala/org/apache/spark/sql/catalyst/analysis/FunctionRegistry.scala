@@ -272,6 +272,7 @@ object FunctionRegistry {
     expression[Tan]("tan"),
     expression[Cot]("cot"),
     expression[Tanh]("tanh"),
+    expression[EbayMultiply]("ebay_multiply"),
 
     expression[Add]("+"),
     expression[Subtract]("-"),
