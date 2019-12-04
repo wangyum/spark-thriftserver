@@ -531,4 +531,28 @@ class ArithmeticExpressionSuite extends SparkFunSuite with ExpressionEvalHelper 
       checkEvaluation(e6, 0.toByte)
     }
   }
+
+  test("ebay_multiply vs bround") {
+    checkEvaluation(EbayMultiply(Literal(2.4D), Literal(1.20625D)), 2.89)
+    checkEvaluation(EbayMultiply(Literal(5.0D), Literal(1.243D)), 6.21)
+    checkEvaluation(EbayMultiply(Literal(6.0D), Literal(1.1225D)), 6.73)
+    checkEvaluation(EbayMultiply(Literal(16.8D), Literal(1.24375D)), 20.89)
+    checkEvaluation(EbayMultiply(Literal(18.4D), Literal(1.20625D)), 22.19)
+    checkEvaluation(EbayMultiply(Literal(25.0D), Literal(1.20940D)), 30.23)
+    checkEvaluation(BRound(2.4D * 1.20625D, 2), 2.90)
+    checkEvaluation(BRound(5.0D * 1.243D, 2), 6.22)
+    checkEvaluation(BRound(6.0D * 1.1225D, 2), 6.74)
+    checkEvaluation(BRound(16.8D * 1.24375D, 2), 20.9)
+    checkEvaluation(BRound(18.4D * 1.20625D, 2), 22.20)
+    checkEvaluation(BRound(25.0D * 1.20940D, 2), 30.24)
+
+    checkEvaluation(EbayMultiply(Literal(5.60D), Literal(1.2504D)), 7.00)
+    checkEvaluation(EbayMultiply(Literal(6.25D), Literal(1.2504D)), 7.81)
+    checkEvaluation(EbayMultiply(Literal(23.20D), Literal(1.24375D)), 28.85)
+    checkEvaluation(EbayMultiply(Literal(300.00D), Literal(1.12825D)), 338.47)
+    checkEvaluation(BRound(5.60D * 1.2504D, 2), 7.00)
+    checkEvaluation(BRound(6.25D * 1.2504D, 2), 7.81)
+    checkEvaluation(BRound(23.20D * 1.24375D, 2), 28.85)
+    checkEvaluation(BRound(300.00D * 1.12825D, 2), 338.47)
+  }
 }
