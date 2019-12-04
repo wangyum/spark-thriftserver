@@ -199,6 +199,11 @@ public class ServiceSessionImpl implements ServiceSession {
   }
 
   @Override
+  public SQLContext getSQLContext() {
+    return this.sqlContext;
+  }
+
+  @Override
   public void setOperationLogSessionDir(File operationLogRootDir) {
     if (!operationLogRootDir.exists()) {
       LOG.warn("The operation log root directory is removed, recreating: " +
@@ -324,6 +329,7 @@ public class ServiceSessionImpl implements ServiceSession {
       throws ServiceSQLException {
     acquire(true);
     try {
+
       throw new ServiceSQLException("Unrecognized GetInfoType value: " + getInfoType.toString());
     } finally {
       release(true);

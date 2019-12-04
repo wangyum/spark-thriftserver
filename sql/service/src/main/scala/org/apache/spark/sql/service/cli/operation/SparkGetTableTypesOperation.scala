@@ -32,15 +32,12 @@ import org.apache.spark.util.{Utils => SparkUtils}
 /**
  * Spark's own GetTableTypesOperation
  *
- * @param sqlContext SQLContext to use
  * @param parentSession a ServiceSession from SessionManager
  */
 private[service] class SparkGetTableTypesOperation(
-    sqlContext: SQLContext,
     parentSession: ServiceSession)
   extends SparkMetadataOperation(parentSession, OperationType.GET_TABLE_TYPES)
   with Logging {
-
   private var statementId: String = _
 
   RESULT_SET_SCHEMA = new TableSchema()

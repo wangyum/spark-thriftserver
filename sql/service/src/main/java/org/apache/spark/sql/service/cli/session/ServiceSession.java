@@ -21,12 +21,16 @@ package org.apache.spark.sql.service.cli.session;
 import java.util.List;
 import java.util.Map;
 
+
+import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.service.auth.SparkAuthFactory;
 import org.apache.spark.sql.service.cli.*;
 
 public interface ServiceSession extends ServiceSessionBase {
 
   void open(Map<String, String> sessionConfMap) throws Exception;
+
+  SQLContext getSQLContext();
 
   /**
    * getInfo operation handler

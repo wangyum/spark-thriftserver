@@ -23,17 +23,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.UI.UI_ENABLED
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd, SparkListenerJobStart}
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{SparkSession, SQLContext}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.service.ReflectionUtils._
-import org.apache.spark.sql.service.cli.{ReflectedCompositeService, SparkSQLCLIService}
-import org.apache.spark.sql.service.cli.thrift.{ThriftBinaryCLIService, ThriftHttpCLIService}
-import org.apache.spark.sql.service.internal.ServiceConf
+import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
 import org.apache.spark.sql.service.server.SparkServer2
 import org.apache.spark.sql.service.ui.ThriftServerTab
 import org.apache.spark.util.{ShutdownHookManager, Utils}
@@ -52,7 +49,6 @@ object SparkThriftServer2 extends Logging {
    */
   @DeveloperApi
   def startWithContext(sqlContext: SQLContext): SparkThriftServer2 = {
-    SparkSQLEnv.setSQLContext(sqlContext)
     val server = new SparkThriftServer2(sqlContext)
 
     server.init(sqlContext.conf)
@@ -79,29 +75,58 @@ object SparkThriftServer2 extends Logging {
     val optionsProcessor = new SparkServer2.ServerOptionsProcessor("SparkThriftServer2")
     optionsProcessor.parse(args)
 
-    logInfo("Starting SparkContext")
-    SparkSQLEnv.init()
+    val sparkConf = new SparkConf(loadDefaults = true)
+    // If user doesn't specify the appName, we want to get [SparkSQL::localHostName] instead of
+    // the default appName [SparkSQLCLIDriver] in cli or beeline.
+    val maybeAppName = sparkConf
+      .getOption("spark.app.name")
+      .filterNot(_ == classOf[SparkThriftServer2].getName)
+
+    sparkConf
+      .setAppName(maybeAppName.getOrElse(s"SparkSQL::${Utils.localHostName()}"))
+
+    val builder = SparkSession.builder().config(sparkConf)
+    val sparkSession = if (sparkConf.get(CATALOG_IMPLEMENTATION.key, "hive")
+      .toLowerCase(Locale.ROOT) == "hive") {
+      if (SparkSession.hiveClassesArePresent) {
+        builder.enableHiveSupport().getOrCreate()
+      } else {
+        builder.config(CATALOG_IMPLEMENTATION.key, "in-memory")
+        builder.getOrCreate()
+      }
+    } else {
+      builder.getOrCreate()
+    }
+    var sparkContext = sparkSession.sparkContext
+    var sqlContext = sparkSession.sqlContext
+
+    // SPARK-29604: force initialization of the session state with the Spark class loader,
+    // instead of having it happen during the initialization of the Hive client (which may use a
+    // different class loader).
+    sparkSession.sessionState
 
     ShutdownHookManager.addShutdownHook { () =>
-      SparkSQLEnv.stop()
+      sparkContext.stop()
+      sparkContext = null
+      sqlContext = null
       uiTab.foreach(_.detach())
     }
 
     try {
-      val server = new SparkThriftServer2(SparkSQLEnv.sqlContext)
-      server.init(SparkSQLEnv.sqlContext.conf)
+      val server = new SparkThriftServer2(sqlContext)
+      server.init(sqlContext.conf)
       server.start()
       logInfo("SparkThriftServer2 started")
-      listener = new SparkThriftServer2Listener(server, SparkSQLEnv.sqlContext.conf)
-      SparkSQLEnv.sparkContext.addSparkListener(listener)
-      uiTab = if (SparkSQLEnv.sparkContext.getConf.get(UI_ENABLED)) {
-        Some(new ThriftServerTab(SparkSQLEnv.sparkContext))
+      listener = new SparkThriftServer2Listener(server, sqlContext.conf)
+      sparkContext.addSparkListener(listener)
+      uiTab = if (sparkContext.getConf.get(UI_ENABLED)) {
+        Some(new ThriftServerTab(sparkContext))
       } else {
         None
       }
       // If application was killed before SparkThriftServer2 start successfully then SparkSubmit
       // process can not exit, so check whether if SparkContext was stopped.
-      if (SparkSQLEnv.sparkContext.stopped.get()) {
+      if (sparkContext.stopped.get()) {
         logError("SparkContext has stopped even if SparkServer2 has started, so exit")
         System.exit(-1)
       }
@@ -158,7 +183,7 @@ object SparkThriftServer2 extends Logging {
   /**
    * An inner sparkListener called in sc.stop to clean up the SparkThriftServer2
    */
-  private[service] class SparkThriftServer2Listener(
+  class SparkThriftServer2Listener(
       val server: SparkServer2,
       val conf: SQLConf) extends SparkListener {
 
@@ -288,33 +313,14 @@ object SparkThriftServer2 extends Logging {
 }
 
 private[spark] class SparkThriftServer2(sqlContext: SQLContext)
-  extends SparkServer2(sqlContext)
-  with ReflectedCompositeService {
+  extends SparkServer2(sqlContext) {
   // state is tracked internally so that the server only attempts to shut down if it successfully
   // started, and then once only.
   private val started = new AtomicBoolean(false)
 
   override def init(sqlConf: SQLConf): Unit = {
-    val sparkSqlCliService = new SparkSQLCLIService(this, sqlContext)
-    setSuperField(this, "cliService", sparkSqlCliService)
-    addService(sparkSqlCliService)
-
-    val thriftCliService = if (isHTTPTransportMode(sqlConf)) {
-      new ThriftHttpCLIService(sparkSqlCliService, sqlContext)
-    } else {
-      new ThriftBinaryCLIService(sparkSqlCliService, sqlContext)
-    }
-
-    setSuperField(this, "thriftCLIService", thriftCliService)
-    addService(thriftCliService)
-    initCompositeService(sqlConf)
+    super.init(sqlConf)
   }
-
-  private def isHTTPTransportMode(sqlConf: SQLConf): Boolean = {
-    val transportMode = sqlConf.getConf(ServiceConf.THRIFTSERVER_TRANSPORT_MODE)
-    transportMode.toLowerCase(Locale.ROOT).equals("http")
-  }
-
 
   override def start(): Unit = {
     super.start()

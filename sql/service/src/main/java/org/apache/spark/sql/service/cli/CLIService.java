@@ -28,6 +28,7 @@ import java.util.concurrent.TimeoutException;
 
 import javax.security.auth.login.LoginException;
 
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.internal.SQLConf;
@@ -59,7 +60,6 @@ public class CLIService extends CompositeService implements ICLIService {
 
   private final Logger LOG = LoggerFactory.getLogger(CLIService.class.getName());
 
-  private SQLConf sqlConf;
   private SQLContext sqlContext;
   private SessionManager sessionManager;
   private UserGroupInformation serviceUGI;
@@ -75,14 +75,27 @@ public class CLIService extends CompositeService implements ICLIService {
 
   @Override
   public synchronized void init(SQLConf sqlConf) {
-    this.sqlConf = sqlConf;
     sessionManager = new SessionManager(sparkServer2, sqlContext);
     addService(sessionManager);
     //  If the hadoop cluster is secure, do a kerberos login for the service from the keytab
     if (UserGroupInformation.isSecurityEnabled()) {
       try {
-        SparkAuthFactory.loginFromKeytab(sqlConf);
-        this.serviceUGI = Utils.getUGI();
+        String principal = sqlConf.getConf(ServiceConf.THRIFTSERVER_KERBEROS_PRINCIPAL());
+        String keyTabFile = sqlConf.getConf(ServiceConf.THRIFTSERVER_KERBEROS_KEYTAB());
+
+        if (principal.isEmpty() || keyTabFile.isEmpty()) {
+          throw new IOException(
+                  "SparkServer2 Kerberos principal or keytab is not correctly configured");
+        }
+
+        UserGroupInformation originalUgi = UserGroupInformation.getCurrentUser();
+         if (SparkAuthFactory.needUgiLogin(originalUgi,
+                SecurityUtil.getServerPrincipal(principal, "0.0.0.0"), keyTabFile)) {
+          SparkAuthFactory.loginFromKeytab(sqlConf);
+           this.serviceUGI = Utils.getUGI();
+        } else {
+           this.serviceUGI = originalUgi;
+        }
       } catch (IOException e) {
         throw new ServiceException("Unable to login to kerberos with given principal/keytab", e);
       } catch (LoginException e) {
@@ -209,10 +222,17 @@ public class CLIService extends CompositeService implements ICLIService {
   @Override
   public GetInfoValue getInfo(SessionHandle sessionHandle, GetInfoType getInfoType)
       throws ServiceSQLException {
-    GetInfoValue infoValue = sessionManager.getSession(sessionHandle)
-        .getInfo(getInfoType);
     LOG.debug(sessionHandle + ": getInfo()");
-    return infoValue;
+    switch (getInfoType) {
+      case CLI_SERVER_NAME:
+        return new GetInfoValue("Spark SQL");
+      case CLI_DBMS_NAME:
+        return new GetInfoValue("Spark SQL");
+      case CLI_DBMS_VER:
+        return new GetInfoValue(sqlContext.sparkContext().version());
+      default:
+        return sessionManager.getSession(sessionHandle).getInfo(getInfoType);
+    }
   }
 
   /* (non-Javadoc)

@@ -49,8 +49,6 @@ import org.apache.spark.util.ShutdownHookManager;
 public class SparkServer2 extends CompositeService {
   private static final Logger LOG = LoggerFactory.getLogger(SparkServer2.class);
 
-  private CLIService cliService;
-  private ThriftCLIService thriftCLIService;
   private SQLContext sqlContext;
 
   public SparkServer2(SQLContext sqlContext) {
@@ -60,8 +58,9 @@ public class SparkServer2 extends CompositeService {
 
   @Override
   public synchronized void init(SQLConf sqlConf) {
-    cliService = new CLIService(this, sqlContext);
+    CLIService cliService = new CLIService(this, sqlContext);
     addService(cliService);
+    ThriftCLIService thriftCLIService;
     if (isHTTPTransportMode(sqlConf)) {
       thriftCLIService = new ThriftHttpCLIService(cliService, sqlContext);
     } else {

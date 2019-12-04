@@ -32,6 +32,7 @@ private[service] abstract class SparkMetadataOperation(
   protected val DEFAULT_HIVE_CATALOG: String = ""
   protected var RESULT_SET_SCHEMA: TableSchema = null
   protected val SEARCH_STRING_ESCAPE: Char = '\\'
+  protected val sqlContext = parentSession.getSQLContext
 
   setHasResultSet(true)
 

@@ -31,11 +31,9 @@ import org.apache.spark.util.{Utils => SparkUtils}
 /**
  * Spark's own GetTypeInfoOperation
  *
- * @param sqlContext    SQLContext to use
  * @param parentSession a ServiceSession from SessionManager
  */
 private[service] class SparkGetTypeInfoOperation(
-    sqlContext: SQLContext,
     parentSession: ServiceSession)
   extends SparkMetadataOperation(parentSession, OperationType.GET_TYPE_INFO) with Logging {
 
